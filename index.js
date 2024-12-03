@@ -1,16 +1,14 @@
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express');
 const cors = require('cors')
+require('dotenv').config()
 const app = express();
 const port = process.env.PORT || 5000;
 
 app.use(express.json());
 app.use(cors());
 
-// asadalgalib9
-// lBtAcPc6SNFnn2Zk
-
-const uri = "mongodb+srv://asadalgalib9:lBtAcPc6SNFnn2Zk@cluster0.xdm7k.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.xdm7k.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const client = new MongoClient(uri, {
     serverApi: {
@@ -27,6 +25,7 @@ async function run() {
 
         const databse = client.db('firstDB');
         const dataCollection = databse.collection('coffees');
+        const userCollection = client.db('firstDB').collection('users');
 
         app.get('/', (req, res) => {
             res.send('app is running')
@@ -53,7 +52,7 @@ async function run() {
             const result = await dataCollection.findOne(cursor);
             res.send(result);
         })
-       
+
         // Update data
         app.put('/coffee/:id', async (req, res) => {
             const id = req.params.id;
@@ -64,8 +63,8 @@ async function run() {
             const option = { upsert: true };
             const updateCoffee = {
                 $set: {
-                    name : update.name,
-                    chef : update.chef,
+                    name: update.name,
+                    chef: update.chef,
                     supplier: update.supplier,
                     taste: update.taste,
                     category: update.category,
@@ -73,16 +72,54 @@ async function run() {
                     photo: update.photo
                 }
             }
-            const result = await dataCollection.updateOne(filter,updateCoffee,option)
+            const result = await dataCollection.updateOne(filter, updateCoffee, option)
             res.send(result);
         })
 
         // Delete data
-        app.delete('/coffee/:id',async(req,res)=>{
+        app.delete('/coffee/:id', async (req, res) => {
             const id = req.params.id;
-            const filter = { _id : new ObjectId(id)};
+            const filter = { _id: new ObjectId(id) };
             const result = await dataCollection.deleteOne(filter);
             res.send(result);
+        })
+
+        // users relataded apis
+
+        // creat users
+        app.post('/users', async (req, res) => {
+            const newUser = req.body;
+            console.log('user', newUser);
+            const result = await userCollection.insertOne(newUser);
+            res.send(result);
+        })
+
+        // read all users
+        app.get('/users', async (req, res) => {
+            const cursor = userCollection.find();
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+        // delete a user 
+        app.delete('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const result = await userCollection.deleteOne(filter);
+            res.send(result);
+        })
+
+        app.patch('/users', async (req, res) => {
+            const email = req.body.email;
+            const filter = { email };
+            const data = req.body;
+            const update = {
+                $set: {
+                    lastSignInTime: data?.lastSignInTime
+                }
+            }
+            const result = await userCollection.updateOne(filter,update)
+            res.send(result)
         })
 
         app.listen(port, () => {
@@ -91,6 +128,7 @@ async function run() {
 
 
     } finally {
+
     }
 }
 run().catch(console.dir);
